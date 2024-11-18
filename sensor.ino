@@ -18,6 +18,9 @@ DHT dht(DHTPIN, DHTTYPE);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+//Controle de envio
+int temp_umi = 0;
+
 // Tópicos MQTT
 const char* topic_temp = "graduacao/iot/grupo_2/temperatura";
 const char* topic_humi = "graduacao/iot/grupo_2/umidade";
@@ -95,34 +98,60 @@ void loop() {
     dtostrf(h, 1, 2, humString);
 
     // Publica temperatura
-    Serial.print("[DEBUG] Publicando temperatura: ");
-    Serial.print(tempString);
-    Serial.print(" no tópico: ");
-    Serial.println(topic_temp);
-
-    client.publish(topic_temp, tempString, true);
-
-    if (client.publish(topic_temp, tempString, true)) {
-      Serial.println("Temperatura publicada com sucesso!");
-    } else {
-      Serial.println("Falha ao publicar a temperatura!");
+    if (temp_umi == 0){
+      Serial.print("[DEBUG] Publicando temperatura: ");
+      Serial.print(tempString);
+      Serial.print(" no tópico: ");
+      Serial.println(topic_temp);
+    }else{
+      Serial.print("[DEBUG] Publicando umidade: ");
+      Serial.print(humString);
+      Serial.print(" no tópico: ");
+      Serial.println(topic_humi);
     }
+
+    if (temp_umi == 0){
+      if (client.publish(topic_temp, tempString, true)){
+        Serial.println("Temperatura publicada!");
+      }else{
+        Serial.println("Falha ao publicar a temperatura!");
+      }
+      
+      temp_umi = 1;
+      
+    }else{
+      if (client.publish(topic_humi, humString, true)){
+        Serial.println("Umidade publicada!");
+      }else{
+        Serial.println("Falha ao publicar a umidade!");
+      }
+      
+      temp_umi = 0;
+    }
+    
+    /*client.publish(topic_humi, humString, true);
+
+    if (client.publish(topic_temp, tempString, true) && client.publish(topic_humi, humString, true)) {
+      Serial.println("Dados publicados com sucesso!");
+    } else {
+      Serial.println("Falha ao publicar os dados!");
+    }*/
 
     // Aguarda antes de publicar a umidade
     //delay(1000);
 
     // Publica umidade
-    Serial.print("[DEBUG] Publicando umidade: ");
-    Serial.print(humString);
-    Serial.print(" no tópico: ");
-    Serial.println(topic_humi);
+    //Serial.print("[DEBUG] Publicando umidade: ");
+    //Serial.print(humString);
+    //Serial.print(" no tópico: ");
+    //Serial.println(topic_humi);
 
-    client.publish(topic_humi, humString, true);
+    //client.publish(topic_humi, humString, true);
 
-    if (client.publish(topic_humi, humString, true)) {
-      Serial.println("Umidade publicada com sucesso!");
-    } else {
-      Serial.println("Falha ao publicar a umidade!");
-    }
+    //if (client.publish(topic_humi, humString, true)) {
+    //  Serial.println("Umidade publicada com sucesso!");
+    //} else {
+    //  Serial.println("Falha ao publicar a umidade!");
+    //}
   }
 }
