@@ -1,38 +1,42 @@
-#include <ESP8266WiFi.h> // Biblioteca para ESP8266
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <DHT.h>
 
 // Configurações Wi-Fi
-const char* ssid = "Rafael";          // Substitua pelo SSID da sua rede Wi-Fi
-const char* password = "5050.1000";  // Substitua pela senha da sua rede Wi-Fi
+const char* ssid = "Rafael-mobile";
+const char* password = "aqbbh3gh7k3j8vj";
 
 // Configurações do Broker MQTT
-const char* mqtt_server = "test.mosquitto.org";
+const char* mqtt_server = "test.mosquitto.org"; // Broker alternativo para testes
 const int mqtt_port = 1883;
 
 // Configuração do DHT11
-#define DHTPIN 2   // Pino conectado ao DHT11 (GPIO2 no ESP8266)
+#define DHTPIN 2
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// Tópicos MQTT para o grupo 2
+// Tópicos MQTT
 const char* topic_temp = "graduacao/iot/grupo_2/temperatura";
 const char* topic_humi = "graduacao/iot/grupo_2/umidade";
+
+// Variáveis de controle
+unsigned long lastMsg = 0;
+const long interval = 5000; // Intervalo de 5 segundos entre as publicações
 
 void setup() {
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
-  client.setBufferSize(512); // Aumenta o buffer MQTT para suportar mensagens maiores
+  //client.setBufferSize(512); // Ajusta o buffer para suportar payloads maiores
+  //client.setKeepAlive(60); //Mantém conexão aberta por mais tempo
   dht.begin();
 }
 
 void setup_wifi() {
   delay(10);
-  Serial.println();
   Serial.print("Conectando a ");
   Serial.println(ssid);
 
@@ -43,18 +47,19 @@ void setup_wifi() {
     Serial.print(".");
   }
 
-  Serial.println();
-  Serial.println("WiFi conectado");
+  Serial.println("\nWiFi conectado");
   Serial.print("Endereço IP: ");
   Serial.println(WiFi.localIP());
 }
 
 void reconnect() {
-  // Tenta reconectar ao MQTT
   while (!client.connected()) {
     Serial.print("Conectando ao MQTT...");
-    if (client.connect("ESP8266Client")) { // Identificador único para o ESP8266
+    if (client.connect("ESP8266Client")) {
       Serial.println("Conectado!");
+      // Inscreve-se nos tópicos, se necessário
+      // client.subscribe(topic_temp);
+      // client.subscribe(topic_humi);
     } else {
       Serial.print("Falha, rc=");
       Serial.print(client.state());
@@ -70,49 +75,54 @@ void loop() {
   }
   client.loop();
 
-  // Leitura do sensor
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
+  unsigned long now = millis();
+  if (now - lastMsg > interval) {
+    lastMsg = now;
 
-  // Verifica se a leitura do sensor foi válida
-  if (isnan(h) || isnan(t)) {
-    Serial.println("Falha na leitura do sensor!");
-    return;
-  }
+    // Leitura do sensor
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
 
-  // Converte os valores para string
-  char tempString[16];  // Buffer maior para evitar problemas
-  char humString[16];
-  dtostrf(t, 1, 2, tempString); // Converte temperatura para string
-  dtostrf(h, 1, 2, humString); // Converte umidade para string
+    if (isnan(h) || isnan(t)) {
+      Serial.println("Falha na leitura do sensor!");
+      return;
+    }
 
-  // Publica temperatura no broker MQTT
-  if (client.publish(topic_temp, tempString)) {
-    Serial.println("Temperatura publicada com sucesso!");
-  } else {
-    Serial.println("Falha ao publicar a temperatura!");
-  }
+    // Converte os valores para string
+    char tempString[8];
+    char humString[8];
+    dtostrf(t, 1, 2, tempString);
+    dtostrf(h, 1, 2, humString);
 
-  // Adiciona um pequeno delay antes de enviar a próxima mensagem
-  //delay(500);
+    // Publica temperatura
+    Serial.print("[DEBUG] Publicando temperatura: ");
+    Serial.print(tempString);
+    Serial.print(" no tópico: ");
+    Serial.println(topic_temp);
 
-  // Verifica o payload de umidade e publica
-  if (strlen(humString) > 0) {
-    if (client.publish(topic_humi, humString)) {
+    client.publish(topic_temp, tempString, true);
+
+    if (client.publish(topic_temp, tempString, true)) {
+      Serial.println("Temperatura publicada com sucesso!");
+    } else {
+      Serial.println("Falha ao publicar a temperatura!");
+    }
+
+    // Aguarda antes de publicar a umidade
+    //delay(1000);
+
+    // Publica umidade
+    Serial.print("[DEBUG] Publicando umidade: ");
+    Serial.print(humString);
+    Serial.print(" no tópico: ");
+    Serial.println(topic_humi);
+
+    client.publish(topic_humi, humString, true);
+
+    if (client.publish(topic_humi, humString, true)) {
       Serial.println("Umidade publicada com sucesso!");
     } else {
       Serial.println("Falha ao publicar a umidade!");
     }
-  } else {
-    Serial.println("Erro: Payload de umidade está vazio!");
   }
-
-  // Exibe no monitor serial
-  Serial.print("Temperatura: ");
-  Serial.print(tempString);
-  Serial.print(" °C\tUmidade: ");
-  Serial.print(humString);
-  Serial.println(" %");
-
-  delay(5000); // Aguarda 5 segundos para a próxima leitura
 }
