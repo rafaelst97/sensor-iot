@@ -3,8 +3,8 @@
 #include <DHT.h>
 
 // Configurações Wi-Fi
-const char* ssid = "Rafael-mobile";
-const char* password = "aqbbh3gh7k3j8vj";
+const char* ssid = "Rafael";
+const char* password = "5050.1000";
 
 // Configurações do Broker MQTT
 const char* mqtt_server = "test.mosquitto.org"; // Broker alternativo para testes
@@ -28,7 +28,7 @@ const char* topic_humi = "graduacao/iot/grupo_2/umidade";
 
 // Variáveis de controle
 unsigned long lastMsg = 0;
-const long interval = 500; // Intervalo de 5 segundos entre as publicações
+const long interval = 500; // Intervalo de 5 milissegundos entre as publicações
 
 void setup() {
   Serial.begin(115200);
