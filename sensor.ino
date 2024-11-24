@@ -28,7 +28,7 @@ const char* topic_humi = "graduacao/iot/grupo_2/umidade";
 
 // Variáveis de controle
 unsigned long lastMsg = 0;
-const long interval = 500; // Intervalo de 5 milissegundos entre as publicações
+const long interval = 500; // Intervalo entre as publicações
 
 void setup() {
   Serial.begin(115200);
